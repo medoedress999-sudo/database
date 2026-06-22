@@ -7,7 +7,7 @@ $conn =new mysqli($host, $username, $password, $dbname);
 if ($conn->connect_error) {
     die("فشل الاتصال بقاعده البيانات") .$conn->connect_error;
 }*/
-$host ="gateway01.eu-central-1.prod.aws.tidbcloud.com";
+$host = "gateway01.eu-central-1.prod.aws.tidbcloud.com";
 $username ="vS11ZywUoDEi23o.root";
 $password ="rPbhCpEfs88WJe1T";
 $port =4000;

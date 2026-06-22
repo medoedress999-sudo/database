@@ -1,58 +1,54 @@
 <?php
-// حل مشكلة الـ CORS نهائياً
+// 1. إعدادات الـ CORS
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
+// 2. التعامل مع طلبات الـ OPTIONS (للموبايل والـ API)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
+$hostname = "gateway01.eu-central-1.prod.aws.tidbcloud.com";
+$username = "vS11ZywUoDEi23o.root";
+$password = "rPbhCpEfs88WJe1T";
+$dbname   = "test";
+$port     = 4000;
 
-$host = "localhost";
-$username = "root";
-$password = "";
-$dbname = "attendance_db"; // اسم قاعدة البيانات الصح بتاعك
+$conn = mysqli_init();
 
-$conn = new mysqli($host, $username, $password, $dbname);
+// السطر الجديد اللي هيجبر XAMPP يتجاهل فحص الشهادة ويفتح التشفير فوراً
+mysqli_options($conn, MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
 
-if ($conn->connect_error) {
+mysqli_ssl_set($conn, NULL, NULL, NULL, NULL, NULL);
+
+// الاتصال مع إجبار استخدام التشفير
+if (!mysqli_real_connect($conn, $hostname, $username, $password, $dbname, $port, NULL, MYSQLI_CLIENT_SSL)) {
     http_response_code(500);
-    echo json_encode(array("status" => "error", "message" => "فشل الاتصال: " . $conn->connect_error));
+    echo json_encode(array("status" => "error", "message" => "فشل الاتصال: " . mysqli_connect_error()));
     exit();
 }
 
 $conn->set_charset("utf8mb4");
 
-// استقبال البيانات
+
+// 5. استقبال ومعالجة البيانات
 $data = json_decode(file_get_contents("php://input"), true);
 
 if (!empty($data['student_name']) && !empty($data['course_name'])) {
-    
-    // ربط المتغيرات بأسماء العواميد الحقيقية في جدولك بالظبط
     $name = $conn->real_escape_string($data['student_name']);
     $course = $conn->real_escape_string($data['course_name']);
-    $qr_token = isset($data['qr_code_scanned']) ? $conn->real_escape_string($data['qr_code_scanned']) : '';
-    $latitude = isset($data['student_lat']) ? (float)$data['student_lat'] : 0.0;
-    $longitude = isset($data['student_lon']) ? (float)$data['student_lon'] : 0.0;
-    $stuts = "حاضر"; 
-
-    // الاستعلام المظبوط على أسامي عواميدك في الـ phpMyAdmin
-    $sql = "INSERT INTO students (name, stuts, course, latitude, longitude, qr_token) 
-            VALUES ('$name', '$stuts', '$course', $latitude, $longitude, '$qr_token')";
+    
+    $sql = "INSERT INTO students (name, stuts, course) VALUES ('$name', 'حاضر', '$course')";
 
     if ($conn->query($sql) === TRUE) {
-        http_response_code(200);
-        echo json_encode(array("status" => "success", "message" => "مبروgit config --global user.email ""
-git config --global user.name ""ك! سجلنا الحضور بنجاح في جدولك"), JSON_UNESCAPED_UNICODE);
+        echo json_encode(array("status" => "success", "message" => "تم تسجيل الحضور بنجاح"));
     } else {
-        http_response_code(500);
-        echo json_encode(array("status" => "error", "message" => "خطأ في الاستعلام: " . $conn->error), JSON_UNESCAPED_UNICODE);
+        echo json_encode(array("status" => "error", "message" => "خطأ في الاستعلام: " . $conn->error));
     }
 } else {
-    http_response_code(400);
-    echo json_encode(array("status" => "error", "message" => "البيانات المرسلة ناقصة"));
+    echo json_encode(array("status" => "error", "message" => "البيانات ناقصة"));
 }
 
 $conn->close();
