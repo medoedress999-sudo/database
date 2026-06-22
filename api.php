@@ -44,7 +44,8 @@ if (!empty($data['student_name']) && !empty($data['course_name'])) {
 
     if ($conn->query($sql) === TRUE) {
         http_response_code(200);
-        echo json_encode(array("status" => "success", "message" => "مبروك! سجلنا الحضور بنجاح في جدولك"), JSON_UNESCAPED_UNICODE);
+        echo json_encode(array("status" => "success", "message" => "مبروgit config --global user.email ""
+git config --global user.name ""ك! سجلنا الحضور بنجاح في جدولك"), JSON_UNESCAPED_UNICODE);
     } else {
         http_response_code(500);
         echo json_encode(array("status" => "error", "message" => "خطأ في الاستعلام: " . $conn->error), JSON_UNESCAPED_UNICODE);
