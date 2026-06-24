@@ -1,27 +1,64 @@
 <?php
-// 1. الاتصال بقاعدة البيانات
-$conn = mysqli_connect("localhost", "root", "", "اسم_قاعدة_بياناتك");
+// استدعاء ملف الاتصال بالداتابيس
+require_once 'db.php'; 
 
-// 2. التحقق من وجود طلب لتقرير مادة معينة
-// لو بعتوا اسم مادة في الـ URL، هنفلتر بيها، لو مبعتوش، هنجيب الكل
-$sql = "SELECT student_name, student_id, course_name, created_at FROM attendance ORDER BY created_at DESC";
-
-if (isset($_GET['course_name'])) {
-    $course = mysqli_real_escape_string($conn, $_GET['course_name']);
-    $sql = "SELECT student_name, student_id, course_name, created_at FROM attendance WHERE course_name = '$course' ORDER BY created_at DESC";
-}
-
-$result = mysqli_query($conn, $sql);
-$attendance_data = array();
-
-// 3. تحويل النتائج لمصفوفة
-while($row = mysqli_fetch_assoc($result)) {
-    $attendance_data[] = $row;
-}
-
-// 4. الرد بصيغة JSON عشان الفلاتر
+// إعداد الرأس ليكون JSON ليتعامل معه الفرونت اند بسهولة
 header('Content-Type: application/json');
-echo json_encode($attendance_data);
 
-mysqli_close($conn);
+$method = $_SERVER['REQUEST_METHOD'];
+
+// --- 1. التعامل مع طلبات إضافة البيانات (POST) ---
+if ($method === 'POST') {
+    $action = $_POST['action'] ?? '';
+
+    // إضافة دكتور
+    if ($action === 'add_doctor') {
+        $stmt = $conn->prepare("INSERT INTO doctors (full_name, email, phone, department, position, office_hours, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssssss", $_POST['full_name'], $_POST['email'], $_POST['phone'], $_POST['department'], $_POST['position'], $_POST['office_hours'], $_POST['status']);
+        
+        if ($stmt->execute()) {
+            echo json_encode(["status" => "success", "message" => "تم إضافة الدكتور بنجاح"]);
+        } else {
+            echo json_encode(["status" => "error", "message" => $conn->error]);
+        }
+    }
+    // إضافة طالب
+    elseif ($action === 'add_student') {
+        $stmt = $conn->prepare("INSERT INTO students (full_name, email, phone, department, academic_year, gpa, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssssss", $_POST['full_name'], $_POST['email'], $_POST['phone'], $_POST['department'], $_POST['academic_year'], $_POST['gpa'], $_POST['status']);
+        
+        if ($stmt->execute()) {
+            echo json_encode(["status" => "success", "message" => "تم إضافة الطالب بنجاح"]);
+        } else {
+            echo json_encode(["status" => "error", "message" => $conn->error]);
+        }
+    }
+    // إضافة كورس
+    elseif ($action === 'add_course') {
+        $stmt = $conn->prepare("INSERT INTO courses (course_name, course_code, assigned_doctors, department, credits) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssss", $_POST['course_name'], $_POST['course_code'], $_POST['assigned_doctors'], $_POST['department'], $_POST['credits']);
+        
+        if ($stmt->execute()) {
+            echo json_encode(["status" => "success", "message" => "تم إضافة الكورس بنجاح"]);
+        } else {
+            echo json_encode(["status" => "error", "message" => $conn->error]);
+        }
+    }
+}
+
+// --- 2. التعامل مع طلبات عرض البيانات (GET) ---
+elseif ($method === 'GET') {
+    $type = $_GET['type'] ?? '';
+    
+    if ($type === 'get_doctors') {
+        $res = $conn->query("SELECT * FROM doctors");
+        echo json_encode($res->fetch_all(MYSQLI_ASSOC));
+    } elseif ($type === 'get_students') {
+        $res = $conn->query("SELECT * FROM students");
+        echo json_encode($res->fetch_all(MYSQLI_ASSOC));
+    } elseif ($type === 'get_courses') {
+        $res = $conn->query("SELECT * FROM courses");
+        echo json_encode($res->fetch_all(MYSQLI_ASSOC));
+    }
+}
 ?>
